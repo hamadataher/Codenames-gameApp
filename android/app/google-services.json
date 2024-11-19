@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "889000911948",
+    "project_id": "codenamesbgu1",
+    "storage_bucket": "codenamesbgu1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:889000911948:android:956c7771e3f15b5da280e9",
+        "android_client_info": {
+          "package_name": "com.hamada"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXY20D4iAo2eILkBTrN74bIh5YVMSV6yw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:889000911948:android:56e55fe9e6304708a280e9",
+        "android_client_info": {
+          "package_name": "com.hamada.codenames_bgu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXY20D4iAo2eILkBTrN74bIh5YVMSV6yw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
