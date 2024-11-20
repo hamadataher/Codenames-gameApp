@@ -5,15 +5,16 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0" # Updated to support a range for better compatibility
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   firebase_auth: ^5.3.2
-  cupertino_icons: ^1.0.8
   firebase_core: ^3.7.0
-  flutter_icons: ^1.1.0 # Added for more icon options (optional)
+  cupertino_icons: ^1.0.8
+  # Use flutter_launcher_icons instead, which supports null safety
+  flutter_launcher_icons: ^0.9.2
 
 dev_dependencies:
   flutter_test:
@@ -21,6 +22,6 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 
 flutter:
-  uses-material-design: true # Ensure Material Design icons are included
+  uses-material-design: true
   assets:
-    - assets/images/designer.jpeg # Ensure correct path and indentation
+    - assets/images/designer.jpeg
