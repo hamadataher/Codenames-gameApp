@@ -1,11 +1,16 @@
 import 'package:codenames_bgu/views/login_view.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart'; // Import Firebase Dynamic Links
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Initialize Firebase Dynamic Links
+  _handleDynamicLinks(); // Handle dynamic links immediately after initialization
+
   hideStatusBar(); // Hide status bar early in app startup
   runApp(MaterialApp(
     title: 'Flutter Demo',
@@ -17,6 +22,30 @@ void main() async {
 void hideStatusBar() {
   SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge); // Ensure content uses the entire screen
+}
+
+// Function to handle dynamic links when app is opened via a link
+Future<void> _handleDynamicLinks() async {
+  final PendingDynamicLinkData? data =
+      await FirebaseDynamicLinks.instance.getInitialLink();
+  _processDynamicLink(
+      data?.link); // Handle the dynamic link if the app was opened via one
+
+  FirebaseDynamicLinks.instance.onLink.listen((dynamicLinkData) {
+    _processDynamicLink(
+        dynamicLinkData.link); // Handle the link if the app is already running
+  }).onError((error) {
+    print('Error handling dynamic link: $error');
+  });
+}
+
+// Function to process the dynamic link
+void _processDynamicLink(Uri? link) {
+  if (link != null && link.queryParameters.containsKey('gameCode')) {
+    String gameCode = link.queryParameters['gameCode']!;
+    print('Game Code from dynamic link: $gameCode');
+    // Here you can navigate to the game page or join the game with the provided game code
+  }
 }
 
 class SplashScreen extends StatefulWidget {
@@ -31,34 +60,27 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    // Delay for 3 seconds and then navigate to LoginView
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginView()),
-      );
+    // Navigate to LoginView after 3 seconds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 3), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the screen size
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Image set to full screen
-            Image.asset(
-              'assets/images/designer.jpeg', // Path to your image
-              height: screenHeight, // Fill the full screen height
-              width: screenWidth, // Fill the full screen width
-              fit: BoxFit.fill, // Ensure the image covers the entire screen
-            ),
-          ],
+      body: SizedBox.expand(
+        child: Image.asset(
+          'assets/images/designer.jpeg',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(child: Text('Failed to load image'));
+          },
         ),
       ),
     );

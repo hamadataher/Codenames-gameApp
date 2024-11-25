@@ -46,3 +46,10 @@ android {
 flutter {
     source = "../.."
 }
+dependencies {
+    implementation 'com.google.firebase:firebase-dynamic-links:21.0.0'  // Firebase Dynamic Links
+    implementation 'com.google.firebase:firebase-core:21.0.0'  // Core Firebase dependency
+    //classpath 'com.google.gms:google-services:4.3.15'  // Latest version
+
+}
+
