@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() async {
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
@@ -15,13 +18,12 @@ void main() async {
   runApp(MaterialApp(
     title: 'Flutter Demo',
     theme: ThemeData(primarySwatch: Colors.green),
-    home: const SplashScreen(), // Show SplashScreen initially
+    home: const SplashScreen(),
   ));
 }
 
 void hideStatusBar() {
-  SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge); // Ensure content uses the entire screen
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 }
 
 // Function to handle dynamic links when app is opened via a link
@@ -76,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       body: SizedBox.expand(
         child: Image.asset(
-          'assets/images/designer.jpeg',
+          'assets/images/Designer.jpeg',
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Center(child: Text('Failed to load image'));

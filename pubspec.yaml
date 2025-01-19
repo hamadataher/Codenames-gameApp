@@ -17,6 +17,12 @@ dependencies:
   flutter_launcher_icons: ^0.14.1
   youtube_player_flutter: ^9.1.1
   firebase_dynamic_links: ^6.0.10
+  share_plus: ^10.1.2
+  cloud_firestore: ^5.5.0
+  uuid: ^4.3.3
+  agora_rtc_engine: ^6.5.0
+  permission_handler: ^11.3.1
+
 
 dev_dependencies:
   flutter_test:
@@ -26,5 +32,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/designer.jpeg
     - assets/images/backgroundd.jpg
+    - assets/images/Designer.jpeg

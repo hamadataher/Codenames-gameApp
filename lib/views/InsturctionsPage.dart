@@ -14,10 +14,8 @@ class _InstructionsViewState extends State<InstructionsView> {
   @override
   void initState() {
     super.initState();
-
-    // Initialize the YouTube Player Controller
     _controller = YoutubePlayerController(
-      initialVideoId: 'zQVHkl8oQEU', // Replace with your YouTube video ID
+      initialVideoId: 'zQVHkl8oQEU',
       flags: const YoutubePlayerFlags(
         autoPlay: false,
         mute: false,
@@ -27,7 +25,7 @@ class _InstructionsViewState extends State<InstructionsView> {
 
   @override
   void dispose() {
-    _controller.dispose(); // Dispose of the controller to release resources
+    _controller.dispose();
     super.dispose();
   }
 
@@ -36,21 +34,18 @@ class _InstructionsViewState extends State<InstructionsView> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
-              'assets/images/backgroundd.jpg', // Replace with your image path
+              'assets/images/backgroundd.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Foreground content
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -60,7 +55,7 @@ class _InstructionsViewState extends State<InstructionsView> {
                           Navigator.pop(context);
                         },
                       ),
-                      const SizedBox(width: 48), // Placeholder for alignment
+                      const SizedBox(width: 48),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -69,7 +64,6 @@ class _InstructionsViewState extends State<InstructionsView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Text instructions
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.8),
@@ -105,7 +99,6 @@ class _InstructionsViewState extends State<InstructionsView> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          // YouTube Player
                           const Text(
                             "Watch How to Play:",
                             style: TextStyle(

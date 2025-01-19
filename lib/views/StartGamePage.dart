@@ -1,78 +1,50 @@
-import 'dart:async';
-import 'dart:math';
-import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'package:codenames_bgu/video_calls/video_call_page.dart';
+import 'package:codenames_bgu/views/team_choosing_view.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
+import 'dart:math';
+import 'package:share_plus/share_plus.dart';
 
-// Generate a unique 6-character alphanumeric game code
-String generateGameCode() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  final random = Random();
-  String gameCode = '';
-  for (int i = 0; i < 6; i++) {
-    gameCode += characters[random.nextInt(characters.length)];
-  }
-  return gameCode;
-}
-
-class StartGameSplash extends StatefulWidget {
-  @override
-  _StartGameSplashState createState() => _StartGameSplashState();
-}
-
-class _StartGameSplashState extends State<StartGameSplash> {
-  @override
-  void initState() {
-    super.initState();
-
-    // Start a timer to navigate after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => StartGamePage(), // Replace with your game page
-        ),
-      );
-    });
-  }
+class StartGameSplashScreen extends StatelessWidget {
+  const StartGameSplashScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const StartGamePage()),
+      );
+    });
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-                'assets/images/backgroundd.jpg'), // Replace with your image path
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/backgroundd.jpg',
             fit: BoxFit.cover,
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(
-                color: Colors.white, // Adjust color to match the theme
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Starting your game...",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color:
-                      Colors.white, // Ensure the text is visible on the image
-                ),
-              ),
-            ],
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text('Loading...', style: TextStyle(color: Colors.white)),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
 class StartGamePage extends StatefulWidget {
-  const StartGamePage({super.key});
+  const StartGamePage({Key? key}) : super(key: key);
 
   @override
   _StartGamePageState createState() => _StartGamePageState();
@@ -81,75 +53,243 @@ class StartGamePage extends StatefulWidget {
 class _StartGamePageState extends State<StartGamePage> {
   String? _gameCode;
   String? _joinLink;
+  String? _roomId;
+  Stream<DocumentSnapshot>? _roomStream;
 
   @override
   void initState() {
     super.initState();
-    // Generate game code and dynamic link on page load
     _generateGameCodeAndLink();
   }
 
-  // Function to generate game code and dynamic link
-  Future<void> _generateGameCodeAndLink() async {
-    String gameCode = generateGameCode(); // Generate the game code
+  String generateGameCode() {
+    const characters = '0123456789';
+    final random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        6,
+        (_) => characters.codeUnitAt(random.nextInt(characters.length)),
+      ),
+    );
+  }
 
-    // Create a dynamic link with the game code
+  Future<void> _generateGameCodeAndLink() async {
+    String gameCode = generateGameCode();
+
     final DynamicLinkParameters parameters = DynamicLinkParameters(
-      uriPrefix:
-          'https://codenames.bgu.link', // Your Firebase dynamic link domain
-      link: Uri.parse(
-          'https://codenames.bgu.link/join?gameCode=$gameCode'), // Include the game code as query parameter
+      uriPrefix: 'https://codenames.bgu.link',
+      link: Uri.parse('https://codenames.bgu.link/join?gameCode=$gameCode'),
       androidParameters: AndroidParameters(
-        packageName:
-            'com.hamada.codenames_bgu', // Your Android app package name
+        packageName: 'com.hamada.codenames_bgu',
         minimumVersion: 1,
       ),
       iosParameters: IOSParameters(
-        bundleId: 'com.hamada.codenames_bgu', // Your iOS app bundle ID
+        bundleId: 'com.hamada.codenames_bgu',
         minimumVersion: '1.0.0',
       ),
     );
 
     try {
-      // Generate the dynamic link
       final Uri dynamicUrl =
           await FirebaseDynamicLinks.instance.buildLink(parameters);
 
       setState(() {
         _gameCode = gameCode;
-        _joinLink = dynamicUrl.toString(); // Store the generated dynamic link
+        _joinLink = dynamicUrl.toString();
       });
 
-      print('Generated dynamic link: $_joinLink');
+      await _createRoom(gameCode, dynamicUrl.toString());
     } catch (e) {
       print('Error generating dynamic link: $e');
-      // Handle error appropriately
     }
+  }
+
+  Future<void> _createRoom(String gameCode, String joinLink) async {
+    try {
+      User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        print("User not logged in");
+        return;
+      }
+      String hostId = currentUser.uid;
+
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(hostId)
+          .get();
+
+      if (!userDoc.exists) {
+        print("User document not found.");
+        return;
+      }
+
+      var userData = userDoc.data() as Map<String, dynamic>;
+      String hostUsername = userData['username'] ?? '';
+
+      if (hostUsername.isEmpty) {
+        print("Username is empty in Firestore.");
+        return;
+      }
+
+      Map<String, dynamic> roomData = {
+        'players': [hostUsername],
+        'host': hostUsername,
+        'status': 'waiting',
+        'createdAt': FieldValue.serverTimestamp(),
+        'gameCode': gameCode,
+        'joinLink': joinLink,
+        'playersRoles': {},
+      };
+
+      DocumentReference roomRef =
+          await FirebaseFirestore.instance.collection('rooms').add(roomData);
+
+      _roomId = roomRef.id;
+
+      setState(() {
+        _roomStream = FirebaseFirestore.instance
+            .collection('rooms')
+            .doc(_roomId)
+            .snapshots();
+      });
+    } catch (e) {
+      print("Error creating room: $e");
+    }
+  }
+
+  Future<void> _endRoom() async {
+    if (_roomId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(_roomId)
+          .delete();
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print("Error ending room: $e");
+    }
+  }
+
+  void _startGame() {
+    FirebaseFirestore.instance
+        .collection('rooms')
+        .doc(_roomId)
+        .update({'status': 'in_progress'});
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+          builder: (context) => TeamChoosingView(
+                roomId: _roomId,
+              )),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Start Game")),
-      body: Center(
-        child: _joinLink == null
-            ? const CircularProgressIndicator() // Show loading until link is generated
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Game Code: $_gameCode"),
-                  SizedBox(height: 20),
-                  Text("Join Link: $_joinLink"),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Share the join link with others
-                      print('Join Link: $_joinLink');
-                    },
-                    child: Text("Share Link"),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/backgroundd.jpg',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 90),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: _roomStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    }
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return const Text("Room not found");
+                    }
+
+                    var roomData =
+                        snapshot.data!.data() as Map<String, dynamic>;
+                    List<dynamic> playersList = roomData['players'] ?? [];
+
+                    return Column(
+                      children: playersList.map<Widget>((player) {
+                        bool isHost = player == roomData['host'];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                isHost ? Colors.blueAccent : Colors.greenAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person, size: 30),
+                              const SizedBox(width: 10),
+                              Text(
+                                player,
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+                const Spacer(),
+                if (_gameCode != null)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Game Code: $_gameCode',
+                      style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
                   ),
-                ],
-              ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (_gameCode != null && _joinLink != null) {
+                      Share.share('Join my game: $_joinLink');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white),
+                  icon: const Icon(Icons.share),
+                  label: const Text("Share Link"),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white),
+                  child: const Text("Start Game"),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _endRoom,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white),
+                  child: const Text("End Room"),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

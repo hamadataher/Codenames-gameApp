@@ -1,11 +1,10 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:codenames_bgu/firebase_options.dart'; // Correct import path
-import 'package:firebase_core/firebase_core.dart'; // For Firebase initialization
-import 'register_view.dart'; // Correct import path for RegisterView
-import 'HomePage.dart'; // Correct import path for Homepage
+import 'package:codenames_bgu/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'register_view.dart';
+import 'HomePage.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -56,14 +55,12 @@ class _LoginViewState extends State<LoginView> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
-              'assets/images/backgroundd.jpg', // Replace with your image path
+              'assets/images/backgroundd.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Foreground content
           Center(
             child: SingleChildScrollView(
               child: Padding(
@@ -85,7 +82,6 @@ class _LoginViewState extends State<LoginView> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Email TextField
                           TextField(
                             controller: _email,
                             enableSuggestions: false,
@@ -97,7 +93,6 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // Password TextField
                           TextField(
                             controller: _password,
                             obscureText: true,
@@ -109,7 +104,6 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          // Login Button
                           TextButton(
                             onPressed: () async {
                               final email = _email.text;
@@ -122,19 +116,31 @@ class _LoginViewState extends State<LoginView> {
                                   password: password,
                                 );
                                 print("Logged in: $userCredential");
-                                // Navigate to the Homepage after successful login
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const HomePage(),
-                                  ),
-                                );
-                              } on FirebaseAuthException catch (e) {
-                                if (e.code == 'wrong-password')
-                                  SnackBar(
-                                    content: const Text("wrong password"),
+
+                                User? user = userCredential.user;
+                                if (user != null && user.emailVerified) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const HomePage(),
+                                    ),
                                   );
-                                else {
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Please verify your email before logging in.'),
+                                    ),
+                                  );
+                                }
+                              } on FirebaseAuthException catch (e) {
+                                if (e.code == 'wrong-password') {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Wrong password"),
+                                    ),
+                                  );
+                                } else {
                                   print("Login error: ${e.code}");
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -160,7 +166,6 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          // Register Button
                           TextButton(
                             onPressed: () {
                               Navigator.push(

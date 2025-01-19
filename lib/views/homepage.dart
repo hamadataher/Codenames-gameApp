@@ -1,4 +1,3 @@
-//import 'package:codenames_bgu/views/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_view.dart';
@@ -14,14 +13,12 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
-              'assets/images/backgroundd.jpg', // Replace with your image path
+              'assets/images/backgroundd.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Logout button at the bottom-left corner
           Positioned(
             bottom: 20,
             left: 20,
@@ -38,7 +35,6 @@ class HomePage extends StatelessWidget {
               },
             ),
           ),
-          // Foreground content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -48,14 +44,14 @@ class HomePage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => StartGameSplash(),
+                        builder: (context) => StartGameSplashScreen(),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         vertical: 15, horizontal: 40),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color.fromARGB(255, 8, 94, 164),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -70,14 +66,14 @@ class HomePage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const JoinGamePage(),
+                        builder: (context) => JoinGamePage(),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         vertical: 15, horizontal: 40),
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color.fromARGB(255, 155, 13, 13),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -99,7 +95,7 @@ class HomePage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         vertical: 15, horizontal: 40),
-                    backgroundColor: Colors.orange,
+                    backgroundColor: const Color.fromARGB(255, 132, 130, 129),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -116,5 +112,3 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
-// Placeholder for StartGamePage
