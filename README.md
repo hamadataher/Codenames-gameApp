@@ -73,11 +73,11 @@ This project supports **iOS** and **Android** platforms and is fully optimized f
 ## 📬 Contact
 
 Created by **Hamada Taher**  
-🎓 Bs.C in Computer Science 
+🎓 B.Sc in Computer Science 
 
 - 📧 Email: [hamada.taheer@gmail.com](mailto:hamada.taheer@gmail.com)  
 - 💼 LinkedIn: [www.linkedin.com/in/hamada-taher-05887232b](https://www.linkedin.com/in/hamada-taher-05887232b)
 
 ---
 
-> © 2024 HamadA Taher – All rights reserved.
+> © 2024 Hamada Taher – All rights reserved.
