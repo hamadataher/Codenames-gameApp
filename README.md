@@ -1,54 +1,83 @@
 # 🕵️‍♂️ Codenames: Online Multiplayer Game
 
 **Capstone Project – B.Sc. in Computer Science**  
-A complete online, real-time multiplayer version of the classic game **Codenames**, built with **Flutter** and **Firebase**.
+A complete online, real-time multiplayer version of the classic game **Codenames**, built with **Flutter** and **Firebase**.  
+This project supports **iOS** and **Android** platforms and is fully optimized for mobile devices.
+
+![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue)
+![Language](https://img.shields.io/badge/language-Dart-orange)
+![Framework](https://img.shields.io/badge/framework-Flutter-lightblue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
 ## 🌟 Features
 
 - 🔗 **Online Room Creation**  
-  Create private rooms with a unique shareable code and invite link.
+  Create and join rooms with unique codes and shareable links.
 
 - 🔄 **Real-Time Multiplayer**  
-  Sync players instantly across multiple devices using Firebase Realtime Database.
+  Game state updates instantly across all connected players via Firebase.
 
 - 🟥🟦 **Team & Role Selection**  
-  Choose between Red vs. Blue and play as Spymaster or Operative.
+  Join Red or Blue teams, and choose to play as Spymaster or Operative.
 
-- 🔤 **Randomized Word Grid**  
-  Auto-generated grid with full support for clue giving, guessing, and round flow.
+- 🧠 **Game Mechanics**  
+  Randomized word grids, clue entry, guessing phase, and turn control—all managed in real-time.
 
 - 🔐 **Secure Player Tracking**  
-  Authenticated using Firebase Authentication.
+  Uses Firebase Authentication for login and player identity management.
 
-- 🌍 **Multilingual UI**  
-  Interface available in **English**, **Arabic**, and **Hebrew**.
+- 🌍 **Multilingual Interface**  
+  Available in **English**, **Arabic**, and **Hebrew** for inclusive play.
 
 - 📱 **Responsive Design**  
-  Mobile-first layout optimized for phones and tablets.
+  Mobile-first interface built using Flutter for a native experience on both **Android** and **iOS**.
 
 ---
 
-## 🚀 Technologies Used
+## 📱 Platform Support
 
-- **Flutter** – cross-platform UI framework  
-- **Firebase** – realtime database, authentication, and hosting  
-- **GitHub** – version control and collaboration  
-
----
-
-## 📸 Screenshots
-
-*(Add screenshots here if you have any!)*
+| Platform | Supported | Notes |
+|----------|-----------|-------|
+| Android  | ✅         | Tested on physical and emulated devices |
+| iOS      | ✅         | Compatible with iOS 12+ |
+| Web      | 🚧 Planned | Web version may be added in the future |
 
 ---
 
-## 🛠️ Setup Instructions
+## 🚀 Tech Stack
 
-> To run the app locally:
+| Layer        | Technology               |
+|--------------|--------------------------|
+| Frontend     | Flutter                  |
+| Backend      | Firebase Realtime Database |
+| Auth         | Firebase Authentication  |
+| Hosting      | Firebase Hosting (optional) |
+| State Mgmt   | Provider / Riverpod      |
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/hamadataher/ccodenames_bgu.git
-   cd ccodenames_bgu
+---
+
+## 🧩 App Architecture Overview
+
+- **Flutter**: UI and cross-platform logic  
+- **Firebase**:  
+  - Realtime Database for shared game state  
+  - Auth for secure login  
+  - Optional: Hosting and Functions for web deployment  
+- **Game Flow**:  
+  - Room creation → player join → role selection → game rounds → winner logic
+
+---
+
+## 📬 Contact
+
+Created by **Hamada Taher**  
+🎓 Bs.C in Computer Science 
+
+- 📧 Email: [hamada.taheer@gmail.com](mailto:hamada.taheer@gmail.com)  
+- 💼 LinkedIn: [www.linkedin.com/in/hamada-taher-05887232b](https://www.linkedin.com/in/hamada-taher-05887232b)
+
+---
+
+> © 2024 HamadA Taher – All rights reserved.
