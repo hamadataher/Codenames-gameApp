@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
 import 'dart:ui';
+import 'dart:async';
 
 class GameView extends StatefulWidget {
   final String? roomId;
@@ -26,6 +27,9 @@ class _GameViewState extends State<GameView> {
   int remainingGuesses = 0;
   bool canEndTurn = false;
   bool isLoading = true; // Add this line
+  Timer? spymasterTimer;
+  int remainingTime = 90; // 90 seconds for spymaster
+  bool isTimerActive = false;
 
   @override
   void initState() {
@@ -106,14 +110,26 @@ class _GameViewState extends State<GameView> {
         .snapshots()
         .listen((snapshot) {
       if (snapshot.exists) {
+        final newGameData = snapshot.data() ?? {};
+
+        // Check if turn has changed
+        if (newGameData['turn'] != gameData['turn']) {
+          // Reset and start timer if it's spymaster's turn
+          if (isSpymaster && newGameData['turn'] == playerTeam) {
+            startSpymasterTimer();
+          } else {
+            cancelSpymasterTimer();
+          }
+        }
+
         setState(() {
-          gameData = snapshot.data() ?? {};
+          gameData = newGameData;
         });
 
         // If gameOver is true, show the game over dialog
         if (gameData['gameOver'] == true) {
-          String winner =
-              gameData['winner'] ?? 'No team'; // Safely handle winner data
+          cancelSpymasterTimer();
+          String winner = gameData['winner'] ?? 'No team';
           _showGameOverDialog(winner);
         }
       }
@@ -142,7 +158,7 @@ class _GameViewState extends State<GameView> {
       );
       return;
     }
-
+    cancelSpymasterTimer();
     final currentUser = FirebaseAuth.instance.currentUser;
     String spymasterName = currentUser?.displayName ?? 'Unknown Spymaster';
 
@@ -359,6 +375,65 @@ class _GameViewState extends State<GameView> {
   //     child: Text('Submit Guess'),
   //   );
   // }
+  void startSpymasterTimer() {
+    isTimerActive = true;
+    remainingTime = 90;
+    spymasterTimer?.cancel(); // Cancel any existing timer
+
+    spymasterTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (remainingTime > 0) {
+          remainingTime--;
+        } else {
+          // Time's up - end spymaster's turn
+          timer.cancel();
+          isTimerActive = false;
+          _autoEndTurn();
+        }
+      });
+    });
+  }
+
+  void cancelSpymasterTimer() {
+    spymasterTimer?.cancel();
+    isTimerActive = false;
+  }
+
+  Future<void> _autoEndTurn() async {
+    if (!mounted) return;
+
+    String currentTurn = gameData['turn'];
+    String nextTurn = (currentTurn == 'blue') ? 'red' : 'blue';
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('gameRooms')
+          .doc(widget.roomId)
+          .update({
+        'turn': nextTurn,
+        'currentClue': '',
+        'numberOfWords': 0,
+        'clueSubmitted': false,
+        'remainingGuesses': 0,
+        'canEndTurn': false,
+        'log': FieldValue.arrayUnion(
+            ['${currentTurn.toUpperCase()} Spymaster ran out of time!']),
+      });
+
+      setState(() {
+        remainingTime = 90;
+        isTimerActive = false;
+      });
+    } catch (e) {
+      print("Error auto-ending turn: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    spymasterTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _checkAndStartNewGame() async {
     final roomDoc = await FirebaseFirestore.instance
@@ -372,102 +447,969 @@ class _GameViewState extends State<GameView> {
   }
 
   Future<void> startNewGame(String? roomId) async {
-    List<String> words = [
-      'apple',
-      'banana',
-      'car',
-      'dog',
-      'elephant',
-      'fish',
-      'grape',
-      'hat',
-      'ice',
-      'juice',
-      'kangaroo',
-      'lion',
-      'monkey',
-      'nut',
-      'orange',
-      'pizza',
-      'quilt',
-      'rocket',
-      'sun',
-      'tiger',
-      'umbrella',
-      'vampire',
-      'water',
-      'xylophone',
-      'yellow',
-    ];
+    if (roomId == null) return;
 
-    // Create tiles with their team assignments
-    List<Map<String, dynamic>> tiles = [];
+    try {
+      // Fetch the selected language from Firestore
+      DocumentSnapshot roomDoc = await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(roomId)
+          .get();
 
-    // Add blue tiles (9)
-    for (int i = 0; i < 9; i++) {
+      if (!roomDoc.exists) {
+        print("Room document does not exist.");
+        return;
+      }
+
+      Map<String, dynamic>? roomData = roomDoc.data() as Map<String, dynamic>?;
+      String selectedLanguage = roomData?['language'] ?? 'English';
+
+      // Define word lists for different languages
+      Map<String, List<String>> wordLists = {
+        'English': [
+          'apple',
+          'banana',
+          'car',
+          'dog',
+          'elephant',
+          'fish',
+          'grape',
+          'hat',
+          'ice',
+          'juice',
+          'kangaroo',
+          'lion',
+          'monkey',
+          'nut',
+          'orange',
+          'pizza',
+          'quilt',
+          'rocket',
+          'sun',
+          'tiger',
+          'umbrella',
+          'vampire',
+          'water',
+          'xylophone',
+          'yellow',
+          'airplane',
+          'balloon',
+          'candle',
+          'door',
+          'egg',
+          'fire',
+          'goat',
+          'house',
+          'jungle',
+          'koala',
+          'leaf',
+          'moon',
+          'night',
+          'octopus',
+          'pencil',
+          'queen',
+          'robot',
+          'star',
+          'tree',
+          'unicorn',
+          'volcano',
+          'whale',
+          'x-ray',
+          'yarn',
+          'zebra',
+          'ant',
+          'ball',
+          'cat',
+          'doghouse',
+          'elephant',
+          'fishbowl',
+          'giraffe',
+          'hurricane',
+          'island',
+          'jet',
+          'key',
+          'log',
+          'mountain',
+          'neutron',
+          'octopus',
+          'plane',
+          'quicksand',
+          'rain',
+          'sea',
+          'train',
+          'underwater',
+          'vacuum',
+          'wind',
+          'xylophone',
+          'yellowstone',
+          'zone',
+          'acorn',
+          'butterfly',
+          'clown',
+          'dinosaur',
+          'eggplant',
+          'feather',
+          'garden',
+          'hiking',
+          'ink',
+          'jellyfish',
+          'kiwi',
+          'lava',
+          'mushroom',
+          'nest',
+          'owl',
+          'pyramid',
+          'quicksand',
+          'radio',
+          'skyscraper',
+          'treehouse',
+          'umbrella',
+          'volcano',
+          'waterfall',
+          'xenon',
+          'yogurt',
+          'zeppelin',
+          'astronaut',
+          'ballerina',
+          'cliff',
+          'dolphin',
+          'earthquake',
+          'fairy',
+          'glove',
+          'haunted',
+          'illuminated',
+          'jungle',
+          'knight',
+          'lighthouse',
+          'maple',
+          'needle',
+          'octagon',
+          'puzzle',
+          'quicksilver',
+          'rodeo',
+          'sunflower',
+          'tornado',
+          'umbrella',
+          'vulture',
+          'wolverine',
+          'x-ray',
+          'yawn',
+          'zigzag',
+          'acrobats',
+          'ballet',
+          'circus',
+          'diamond',
+          'envelope',
+          'fountain',
+          'grapefruit',
+          'helicopter',
+          'insect',
+          'jungle',
+          'kite',
+          'lighthouse',
+          'marshmallow',
+          'nerd',
+          'oasis',
+          'plumber',
+          'quilt',
+          'radioactive',
+          'shadow',
+          'turtle',
+          'unicorn',
+          'volcano',
+          'watermelon',
+          'xylophone',
+          'yellow',
+          'zombie',
+          'aeroplane',
+          'broccoli',
+          'clock',
+          'denim',
+          'elephant',
+          'fairy',
+          'gorilla',
+          'hippopotamus',
+          'iron',
+          'juice',
+          'kite',
+          'lemon',
+          'mouse',
+          'nightmare',
+          'piano',
+          'quilt',
+          'reindeer',
+          'saxophone',
+          'tiger',
+          'underwater',
+          'vulture',
+          'whale',
+          'xylophone',
+          'yak',
+          'zebra',
+          'antelope',
+          'basketball',
+          'catfish',
+          'drum',
+          'elephant',
+          'foot',
+          'guitar',
+          'hockey',
+          'iceberg',
+          'jazz',
+          'kettle',
+          'lighthouse',
+          'manatee',
+          'noodles',
+          'octopus',
+          'parrot',
+          'quail',
+          'raccoon',
+          'shark',
+          'tree',
+          'ukulele',
+          'vacuum',
+          'woodpecker',
+          'xenophobia',
+          'yo-yo',
+          'zinc',
+          'airplane',
+          'bulb',
+          'crystal',
+          'dog',
+          'eagle',
+          'fountain',
+          'giraffe',
+          'hurricane',
+          'ink',
+          'jellyfish',
+          'kitten',
+          'lighthouse',
+          'marble',
+          'noodle',
+          'pencil',
+          'quicksilver',
+          'river',
+          'sun',
+          'tiger',
+          'umbrella',
+          'violet',
+          'water',
+          'yogurt',
+          'zebra',
+          'abacus',
+          'bird',
+          'cup',
+          'drum',
+          'elephant',
+          'furnace',
+          'grass',
+          'hamster',
+          'inkwell',
+          'juice',
+          'keypad',
+          'letter',
+          'mosaic',
+          'nutmeg',
+          'oven',
+          'parrot',
+          'quilt',
+          'robot',
+          'strawberry',
+          'tornado',
+          'uncle',
+          'volcano',
+          'whistle',
+          'x-ray',
+          'yarn',
+          'zebra',
+          'accordion',
+          'balloon',
+          'cloud',
+          'doghouse',
+          'eggplant',
+          'fan',
+          'ghost',
+          'hunter',
+          'iPhone',
+          'jacket',
+          'knife',
+          'lollipop',
+          'mousepad',
+          'nightmare',
+          'pen',
+          'quilt',
+          'rocket',
+          'snowflake',
+          'teacup',
+          'underwear',
+          'vulture',
+          'watch',
+          'yawn',
+          'zephyr',
+          'astronaut',
+          'backpack',
+          'cloud',
+          'disco',
+          'earring',
+          'fall',
+          'grape',
+          'helicopter',
+          'illuminator',
+          'jacket',
+          'key',
+          'lighthouse',
+          'mushroom',
+          'noodle',
+          'olympics',
+          'puzzle',
+          'quiet',
+          'rabbit',
+          'saxophone',
+          'treehouse',
+          'universe',
+          'volcano',
+          'wildlife',
+          'xenon',
+          'yellow',
+          'zookeeper'
+        ],
+        'Arabic': [
+          'تفاحة',
+          'موز',
+          'سيارة',
+          'كلب',
+          'فيل',
+          'سمك',
+          'عنب',
+          'قبعة',
+          'ثلج',
+          'عصير',
+          'كنغر',
+          'أسد',
+          'قرد',
+          'جوز',
+          'برتقال',
+          'بيتزا',
+          'لحاف',
+          'صاروخ',
+          'شمس',
+          'نمر',
+          'مظلة',
+          'مصاص دماء',
+          'ماء',
+          'إكسيلفون',
+          'أصفر',
+          'طائرة',
+          'بالون',
+          'شمعة',
+          'باب',
+          'بيض',
+          'نار',
+          'ماعز',
+          'منزل',
+          'غابة',
+          'كوالا',
+          'ورقة',
+          'قمر',
+          'ليل',
+          'أخطبوط',
+          'قلم',
+          'ملكة',
+          'روبوت',
+          'نجم',
+          'شجرة',
+          'وحيد القرن',
+          'بركان',
+          'حوت',
+          'أشعة إكس',
+          'خيط',
+          'زebra',
+          'نملة',
+          'كرة',
+          'قطة',
+          'منزل الكلب',
+          'أفيال',
+          'حوض السمك',
+          'زرافة',
+          'إعصار',
+          'جزيرة',
+          'طائرة',
+          'مفتاح',
+          'سجل',
+          'جبل',
+          'نيوترون',
+          'أخطبوط',
+          'طائرة',
+          'رمال متحركة',
+          'مطر',
+          'بحر',
+          'قطار',
+          'تحت الماء',
+          'فراغ',
+          'ريح',
+          'أشعة إكس',
+          'يلوستون',
+          'منطقة',
+          'بلوط',
+          'فراشة',
+          'مهرج',
+          'ديناصور',
+          'باذنجان',
+          'ريشة',
+          'حديقة',
+          'تسلق الجبال',
+          'حبر',
+          'قنديل البحر',
+          'كيوي',
+          'حمم',
+          'فطر',
+          'عش',
+          'بومة',
+          'هرم',
+          'رمال متحركة',
+          'راديو',
+          'ناطحة سحاب',
+          'منزل الشجرة',
+          'مظلة',
+          'بركان',
+          'شلال',
+          'زينون',
+          'زبادي',
+          'منطاد',
+          'رائد فضاء',
+          'راقصة باليه',
+          'منحدر',
+          'دولفين',
+          'زلزال',
+          'جنية',
+          'قفاز',
+          'ممسوك',
+          'مضيء',
+          'غابة',
+          'فارس',
+          'منارة',
+          'قيقب',
+          'إبرة',
+          'مثمن',
+          'ألغاز',
+          'فضة',
+          'خطف',
+          'شروق الشمس',
+          'كلب البحر',
+          'آلة موسيقية',
+          'غراب',
+          'غابة',
+          'فنلندا',
+          'مظلة',
+          'قوس قزح',
+          'حقيبة الظهر',
+          'كرة سلة',
+          'سمك الق catfish',
+          'طبلة',
+          'أفيال',
+          'قدم',
+          'غيتار',
+          'هوكي',
+          'جبل جليدي',
+          'جاز',
+          'غلاية',
+          'منارة',
+          'مهاجم',
+          'خفافيش',
+          'حيوان مائي',
+          'نجمة البحر',
+          'غروب',
+          'قمر',
+          'شاطئ',
+          'أمواج',
+          'أنابيب',
+          'انفجار',
+          'خريطة',
+          'طبول',
+          'شجرة',
+          'شواطئ',
+          'سكيت',
+          'طائرة',
+          'يوم الأرض',
+          'حصان',
+          'غسالة',
+          'دب',
+          'خنزير',
+          'سيارة',
+          'قلعة',
+          'مفتاح',
+          'قنينة',
+          'فأر',
+          'ساحرة',
+          'مطر',
+          'ريح',
+          'كرة القدم',
+          'معكرونة',
+          'زلزال',
+          'عاصفة',
+          'بيت',
+          'نجم',
+          'زهرة',
+          'شمسية',
+          'أرنب',
+          'سباحة',
+          'مصور',
+          'تي شيرت',
+          'قميص',
+          'قلادة',
+          'حديقة الحيوانات',
+          'سلة',
+          'إقلاع',
+          'هبوط',
+          'مسبح',
+          'قلب',
+          'رمل',
+          'لعبة',
+          'كتابة',
+          'مائدة',
+          'رسومات',
+          'ديك',
+          'علم',
+          'سبورة',
+          'مسرح',
+          'غرفة',
+          'مطعم',
+          'مقهى',
+          'كتب',
+          'سياحة',
+          'منزل',
+          'قائمة',
+          'مرشدة',
+          'جبل',
+          'أنف',
+          'تليفزيون',
+          'ثلاجة',
+          'أبواب',
+          'شعر',
+          'مفتاح',
+          'أسطورة',
+          'طب',
+          'شخصية',
+          'درس',
+          'ألغاز',
+          'مقلاة',
+          'سفرة',
+          'مغسلة',
+          'حسابات',
+          'لوحة',
+          'كتابة',
+          'عين',
+          'نص',
+          'زراعة',
+          'معمل',
+          'مهمة',
+          'قصة',
+          'دور',
+          'خدمة',
+          'خدمة شحن',
+          'تسوق',
+          'الحديقة',
+          'جميع',
+          'أجهزة',
+          'عين',
+          'جميلة',
+          'الحب',
+          'طاولة',
+          'جري',
+          'باب',
+          'دواء',
+          'علاج',
+          'تدريب',
+          'تنظيف',
+          'قراءة',
+          'هواء',
+          'محطة',
+          'سيارة',
+          'قوات',
+          'دليل',
+          'كنز',
+          'شريعة',
+          'قناة',
+          'قطار',
+          'دبابة',
+          'ترجمة',
+          'مبنى',
+          'نهاية',
+          'حروب',
+          'إيجابي',
+          'كوكب',
+          'كأس',
+          'خيال',
+          'معسكر',
+          'المحارب',
+          'حماية',
+          'نقل',
+          'ختم',
+          'سياحة',
+          'بيتزا',
+          'صحة',
+          'غرفة',
+          'طعام',
+          'وجبة',
+          'قوة',
+          'مباراة'
+        ],
+        'Hebrew': [
+          'תפוח',
+          'בננה',
+          'מכונית',
+          'כלב',
+          'פיל',
+          'דג',
+          'ענבים',
+          'כובע',
+          'קרח',
+          'מיץ',
+          'קנגורו',
+          'אריה',
+          'קוף',
+          'אגוז',
+          'תפוז',
+          'פיצה',
+          'שמיכה',
+          'רקטה',
+          'שמש',
+          'נמר',
+          'מטריה',
+          'ערפד',
+          'מים',
+          'קסילופון',
+          'צהוב',
+          'מטוס',
+          'בלון',
+          'נר',
+          'דלת',
+          'ביצה',
+          'אש',
+          'עז',
+          'בית',
+          'יער',
+          'קואלה',
+          'דף',
+          'ירח',
+          'לילה',
+          'תמנון',
+          'עט',
+          'מלכה',
+          'רובוט',
+          'כוכב',
+          'עץ',
+          'קרנף',
+          'הר געש',
+          'לווייתן',
+          'קרני רנטגן',
+          'חוט',
+          'זברה',
+          'נמלה',
+          'כדור',
+          'חתול',
+          'בית כלבים',
+          'פיל',
+          'אקווריום',
+          'סופה',
+          'אי',
+          'מטוס',
+          'מפתח',
+          'ספר',
+          'הר',
+          'נויטרון',
+          'תמנון',
+          'מטוס',
+          'חול',
+          'גשם',
+          'ים',
+          'רכבת',
+          'מתחת למים',
+          'חלל',
+          'רוח',
+          'קרני רנטגן',
+          'יוסטון',
+          'אזור',
+          'אלון',
+          'פרפר',
+          'ליצנים',
+          'דינוזואר',
+          'חציל',
+          'נוצה',
+          'גן',
+          'טיפוס הרים',
+          'דיו',
+          'מדוזה',
+          'קיווי',
+          'לבה',
+          'פטרייה',
+          'קן',
+          'ינשוף',
+          'פירמידה',
+          'חול',
+          'רדיו',
+          'גורדי שחקים',
+          'בית על עץ',
+          'מטריה',
+          'הר געש',
+          'מפלים',
+          'זינון',
+          'יוגורט',
+          'כדור פורח',
+          'אסטרונאוט',
+          'בלרינה',
+          'מדרון',
+          'דולפין',
+          'רעידת אדמה',
+          'פיה',
+          'כפפה',
+          'נעול',
+          'מואר',
+          'יער',
+          'רוכב',
+          'מגדלור',
+          'אדר',
+          'מחט',
+          'מצולע',
+          'חידות',
+          'כסף',
+          'חטיפה',
+          'זריחה',
+          'כלב ים',
+          'כלי נגינה',
+          'עורב',
+          'יער',
+          'פינלנד',
+          'מטריה',
+          'קשת',
+          'תיק גב',
+          'כדורסל',
+          'דג חתול',
+          'תוף',
+          'פיל',
+          'רגל',
+          'גיטרה',
+          'הוקי',
+          'קרחון',
+          'מגדלור',
+          'תוקף',
+          'עטלפים',
+          'חיית מים',
+          'כוכב ים',
+          'שקיעה',
+          'ירח',
+          'חוף',
+          'גלים',
+          'צינור',
+          'פיצוץ',
+          'מפה',
+          'תופים',
+          'עץ',
+          'חופים',
+          'סקייט',
+          'מטוס',
+          'יום כדור הארץ',
+          'סוס',
+          'מכונת כביסה',
+          'דוב',
+          'חזיר',
+          'מכונית',
+          'טירה',
+          'מפתח',
+          'בקבוק',
+          'עכבר',
+          'מכשפה',
+          'גשם',
+          'רוח',
+          'כדורגל',
+          'פסטה',
+          'רעידת אדמה',
+          'סופה',
+          'בית',
+          'כוכב',
+          'פרח',
+          'מטרייה',
+          'ארנב',
+          'שחייה',
+          'צלם',
+          'חולצה',
+          'סוודר',
+          'תכשיט',
+          'גן חיות',
+          'סל',
+          'המראה',
+          'נחיתה',
+          'בריכה',
+          'לב',
+          'חול',
+          'משחק',
+          'כתיבה',
+          'שולחן',
+          'ציורים',
+          'תרנגול',
+          'דגל',
+          'לוח לבן',
+          'תיאטרון',
+          'חדר',
+          'מסעדה',
+          'קפה',
+          'ספרים',
+          'תיירות',
+          'בית',
+          'רשימה',
+          'מדריך',
+          'הר',
+          'אף',
+          'טלויזיה',
+          'מקרר',
+          'דלתות',
+          'שיער',
+          'מפתח',
+          'אגדה',
+          'רפואה',
+          'דמות',
+          'שיעור',
+          'חידות',
+          'מחבת',
+          'שולחן אוכל',
+          'כיור',
+          'חשבונאות',
+          'לוח',
+          'כתיבה',
+          'עין',
+          'טקסט',
+          'חקלאות',
+          'מעבדה',
+          'משימה',
+          'סיפור',
+          'תפקיד',
+          'שירות',
+          'שירות משלוח',
+          'קניות',
+          'הגינה',
+          'כל',
+          'מכשירים',
+          'עין',
+          'יפה',
+          'אהבה',
+          'שולחן',
+          'ריצה',
+          'דלת',
+          'תרופה',
+          'טיפול',
+          'אימון',
+          'ניקוי',
+          'קריאה',
+          'אוויר',
+          'תחנה',
+          'מכונית',
+          'כוחות',
+          'מדריך',
+          'אוצר',
+          'חוק',
+          'ערוץ',
+          'רכבת',
+          'טנק',
+          'תרגום',
+          'בניין',
+          'סוף',
+          'מלחמות',
+          'חיובי',
+          'כוכב',
+          'גביע',
+          'דמיון',
+          'מחנה',
+          'לוחם',
+          'הגנה',
+          'הובלה',
+          'חותם',
+          'תיירות',
+          'פיצה',
+          'בריאות',
+          'חדר',
+          'אוכל',
+          'ארוחה',
+          'כוח',
+          'תחרות'
+        ],
+      };
+
+// Get the words for the selected language and pick 25 random ones
+      List<String> words =
+          List.from(wordLists[selectedLanguage] ?? wordLists['English']!);
+      words.shuffle(Random());
+      List<String> selectedWords = words.take(25).toList();
+
+// Create the tiles with team assignments
+      List<Map<String, dynamic>> tiles = [];
+
+// 9 Blue tiles
+      for (int i = 0; i < 9; i++) {
+        tiles.add({
+          'word': '',
+          'status': 'hidden',
+          'team': 'blue',
+          'selectedBy': null,
+        });
+      }
+
+// 8 Red tiles
+      for (int i = 0; i < 8; i++) {
+        tiles.add({
+          'word': '',
+          'status': 'hidden',
+          'team': 'red',
+          'selectedBy': null,
+        });
+      }
+
+// 7 White tiles (neutral)
+      for (int i = 0; i < 7; i++) {
+        tiles.add({
+          'word': '',
+          'status': 'hidden',
+          'team': 'white',
+          'selectedBy': null,
+        });
+      }
+
+// 1 Black tile (assassin)
       tiles.add({
         'word': '',
         'status': 'hidden',
-        'team': 'blue',
+        'team': 'black',
         'selectedBy': null,
       });
-    }
 
-    // Add red tiles (8)
-    for (int i = 0; i < 8; i++) {
-      tiles.add({
-        'word': '',
-        'status': 'hidden',
-        'team': 'red',
-        'selectedBy': null,
+// Shuffle the tile assignments randomly
+      tiles.shuffle(Random());
+
+// Assign the selected 25 words to the shuffled tiles
+      for (int i = 0; i < tiles.length; i++) {
+        tiles[i]['word'] = selectedWords[i];
+      }
+
+      // Save game data
+      await FirebaseFirestore.instance.collection('gameRooms').doc(roomId).set({
+        'tiles': tiles,
+        'turn': 'blue',
+        'blueScore': 9,
+        'redScore': 8,
+        'log': [],
+        'clueSubmitted': false,
+        'remainingGuesses': 0,
+        'canEndTurn': false,
+        'currentClue': '',
+        'numberOfWords': 0,
+        'gameOver': false,
+        'winner': '',
       });
+
+      print("Cards have been distributed in $selectedLanguage and saved.");
+    } catch (e) {
+      print("Error starting new game: $e");
     }
-
-    // Add neutral tiles (7)
-    for (int i = 0; i < 7; i++) {
-      tiles.add({
-        'word': '',
-        'status': 'hidden',
-        'team': 'white',
-        'selectedBy': null,
-      });
-    }
-
-    // Add assassin tile (1)
-    tiles.add({
-      'word': '',
-      'status': 'hidden',
-      'team': 'black',
-      'selectedBy': null,
-    });
-
-    // Shuffle both the words and tiles
-    words.shuffle(Random());
-    tiles.shuffle(Random());
-
-    // Assign words to tiles
-    for (int i = 0; i < tiles.length; i++) {
-      tiles[i]['word'] = words[i];
-    }
-
-    await FirebaseFirestore.instance.collection('gameRooms').doc(roomId).set({
-      'tiles': tiles,
-      'turn': 'blue',
-      'blueScore': 9,
-      'redScore': 8,
-      'log': [],
-      'clueSubmitted': false,
-      'remainingGuesses': 0,
-      'canEndTurn': false,
-      'currentClue': '',
-      'numberOfWords': 0,
-      'gameOver': false,
-      'winner': '',
-    });
-
-    print("Cards have been distributed and saved.");
   }
-
   // Future<void> _submitClue() async {
   //   if (clueController.text.isEmpty || numberOfWords < 1) {
   //     ScaffoldMessenger.of(context).showSnackBar(
@@ -507,27 +1449,28 @@ class _GameViewState extends State<GameView> {
   // }
 
   Future<void> _endTurn() async {
-    String nextTurn = (gameData['turn'] == 'blue') ? 'red' : 'blue';
     String currentTurn = gameData['turn'];
+    String nextTurn = (currentTurn == 'blue') ? 'red' : 'blue';
 
-    // Check for end game conditions
-    bool isGameOver = false;
-    String winner = '';
-    //clear team selections
-    // Create a deep copy of the tiles array
-    List<Map<String, dynamic>> updatedTiles = gameData['tiles'].map((tile) {
-      var newTile = Map<String, dynamic>.from(tile);
+    // Fix the type casting issue
+    List<dynamic> originalTiles = List.from(gameData['tiles']);
+    List<Map<String, dynamic>> updatedTiles = originalTiles.map((tile) {
+      Map<String, dynamic> newTile = Map<String, dynamic>.from(tile);
       if (newTile['selectedBy']?['team'] == currentTurn) {
         newTile['selectedBy'] = null;
       }
       return newTile;
     }).toList();
 
+    // Check for end game conditions
+    bool isGameOver = false;
+    String winner = '';
+
     // Check if any team's words are all revealed
-    int blueWordsLeft = gameData['tiles']
+    int blueWordsLeft = updatedTiles
         .where((tile) => tile['team'] == 'blue' && tile['status'] != 'revealed')
         .length;
-    int redWordsLeft = gameData['tiles']
+    int redWordsLeft = updatedTiles
         .where((tile) => tile['team'] == 'red' && tile['status'] != 'revealed')
         .length;
 
@@ -540,56 +1483,30 @@ class _GameViewState extends State<GameView> {
     }
 
     // Check if the black word is revealed
-    bool blackWordRevealed = gameData['tiles']
+    bool blackWordRevealed = updatedTiles
         .any((tile) => tile['team'] == 'black' && tile['status'] == 'revealed');
 
     if (blackWordRevealed) {
       isGameOver = true;
-      winner = (gameData['turn'] == 'blue') ? 'red' : 'blue';
+      winner = (currentTurn == 'blue') ? 'red' : 'blue';
     }
 
-    if (isGameOver) {
-      await FirebaseFirestore.instance
-          .collection('gameRooms')
-          .doc(widget.roomId)
-          .update({
-        'gameOver': true,
-        'winner': winner,
-      });
-
-      _showGameOverDialog(winner); // Show Game Over dialog
-      return;
-    }
-    // List<Map<String, dynamic>> updatedTiles = List.from(gameData['tiles']);
-    // for (int i = 0; i < updatedTiles.length; i++) {
-    //   if (updatedTiles[i]['selectedBy']?['team'] == gameData['turn']) {
-    //     updatedTiles[i]['selectedBy'] = null;
-    //   }
-    // }
-
-    // Update the game state for the next turn
     try {
-      // First, update just the tiles to clear selections
-      await FirebaseFirestore.instance
-          .collection('gameRooms')
-          .doc(widget.roomId)
-          .update({
-        'tiles': updatedTiles,
-      });
-      setState(() {
-        gameData = {
-          ...gameData,
+      if (isGameOver) {
+        await FirebaseFirestore.instance
+            .collection('gameRooms')
+            .doc(widget.roomId)
+            .update({
+          'gameOver': true,
+          'winner': winner,
           'tiles': updatedTiles,
-          'turn': nextTurn,
-          'currentClue': '',
-          'numberOfWords': 0,
-          'clueSubmitted': false,
-          'remainingGuesses': 0,
-          'canEndTurn': false,
-        };
-      });
+        });
 
-      // Then update the rest of the game state
+        _showGameOverDialog(winner);
+        return;
+      }
+
+      // Update game state if not game over
       await FirebaseFirestore.instance
           .collection('gameRooms')
           .doc(widget.roomId)
@@ -600,17 +1517,18 @@ class _GameViewState extends State<GameView> {
         'clueSubmitted': false,
         'remainingGuesses': 0,
         'canEndTurn': false,
+        'tiles': updatedTiles,
         'log': FieldValue.arrayUnion(
             ['${currentTurn.toUpperCase()} team\'s turn ended']),
       });
 
       print("Turn ended. Selections cleared for ${currentTurn} team.");
-      print(
-          "Updated tiles: ${updatedTiles.where((tile) => tile['selectedBy'] != null).length} selections remaining");
     } catch (e) {
       print("Error ending turn: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error ending turn: $e")),
+      );
     }
-    print("Turn ended. It's now $nextTurn's turn.");
   }
 
   void _showGameOverDialog(String winner) {
@@ -875,7 +1793,6 @@ class _GameViewState extends State<GameView> {
   }
 
   Widget _buildGameStatus() {
-    // Add null checks and default values
     bool clueSubmitted = gameData['clueSubmitted'] ?? false;
     String currentTurn = gameData['turn'] ?? '';
     String currentClue = gameData['currentClue'] ?? '';
@@ -883,32 +1800,123 @@ class _GameViewState extends State<GameView> {
     int remainingGuesses = gameData['remainingGuesses'] ?? 0;
     bool canEndTurn = gameData['canEndTurn'] ?? false;
 
-    if (!clueSubmitted) {
-      return Text(
-        isSpymaster && currentTurn == playerTeam
-            ? "Give your team a clue!"
-            : "Waiting for Spymaster's clue...",
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      );
-    }
-
     return Column(
       children: [
-        Text(
-          "Current Clue: $currentClue ($numWords)",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          "Remaining Guesses: $remainingGuesses",
-          style: TextStyle(fontSize: 16),
-        ),
-        if (currentTurn == playerTeam && !isSpymaster)
-          ElevatedButton(
-            onPressed: _endTurn,
-            child: Text('End Turn'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+        // Turn Indicator and Timer in a Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Turn Indicator
+            Container(
+              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: currentTurn == playerTeam
+                    ? (currentTurn == 'blue' ? Colors.blue : Colors.red)
+                    : Colors.grey[700],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+                border: currentTurn == playerTeam
+                    ? Border.all(color: Colors.white, width: 2)
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    currentTurn == playerTeam
+                        ? Icons.arrow_forward
+                        : Icons.hourglass_empty,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    currentTurn == playerTeam
+                        ? "YOUR TURN!"
+                        : "${currentTurn.toUpperCase()} TEAM'S TURN",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
             ),
+
+            // Timer
+            if (isTimerActive)
+              Container(
+                margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: remainingTime <= 10 ? Colors.red : Colors.orange,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.timer,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      '$remainingTime',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+
+        // Rest of your existing content
+        if (!clueSubmitted)
+          Text(
+            isSpymaster && currentTurn == playerTeam
+                ? "Give your team a clue!"
+                : "Waiting for Spymaster's clue...",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          )
+        else
+          Column(
+            children: [
+              Text(
+                "Current Clue: $currentClue ($numWords)",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                "Remaining Guesses: $remainingGuesses",
+                style: TextStyle(fontSize: 16),
+              ),
+              if (currentTurn == playerTeam && !isSpymaster && canEndTurn)
+                ElevatedButton(
+                  onPressed: _endTurn,
+                  child: Text('End Turn'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                ),
+            ],
           ),
       ],
     );

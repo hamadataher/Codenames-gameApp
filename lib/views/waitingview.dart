@@ -29,7 +29,7 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
         .snapshots();
 
     // Start the timer to check the game status every 5 seconds
-    _statusCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _statusCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _checkGameStatus();
     });
   }
@@ -202,6 +202,7 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                     },
                   ),
                 ),
+                // Add some space between the content and the buttons
                 const SizedBox(height: 20),
                 Text(
                   'Game Code: $gameCode',
@@ -211,6 +212,8 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                     color: Colors.white,
                   ),
                 ),
+                // Use a SizedBox to move buttons up a bit
+                SizedBox(height: 20), // Add spacing above the buttons
                 ElevatedButton(
                   onPressed: () {
                     _shareGameLink(roomData['joinLink'] ?? '');
@@ -220,6 +223,7 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                     minimumSize: const Size(double.infinity, 50),
                   ),
                 ),
+                SizedBox(height: 10), // Small space between buttons
                 ElevatedButton(
                   onPressed: _exitRoom,
                   style: ElevatedButton.styleFrom(
@@ -231,6 +235,7 @@ class _WaitingRoomPageState extends State<WaitingRoomPage> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
+                SizedBox(height: 50)
               ],
             ),
           );

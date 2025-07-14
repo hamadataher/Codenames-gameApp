@@ -1,4 +1,4 @@
-import 'package:codenames_bgu/video_calls/video_call_page.dart';
+//import 'package:codenames_bgu/video_calls/video_call_page.dart';
 import 'package:codenames_bgu/views/team_choosing_view.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -56,6 +56,11 @@ class _StartGamePageState extends State<StartGamePage> {
   String? _roomId;
   Stream<DocumentSnapshot>? _roomStream;
 
+  // Start with English, but allow dynamic changes
+  String _selectedLanguage = 'English';
+
+  final List<String> _languages = ['Arabic', 'Hebrew', 'English'];
+
   @override
   void initState() {
     super.initState();
@@ -98,9 +103,26 @@ class _StartGamePageState extends State<StartGamePage> {
         _joinLink = dynamicUrl.toString();
       });
 
+      // Create room with the currently selected language
       await _createRoom(gameCode, dynamicUrl.toString());
     } catch (e) {
       print('Error generating dynamic link: $e');
+    }
+  }
+
+  Future<void> _recreateRoomWithLanguage() async {
+    if (_roomId != null) {
+      try {
+        // Update the existing room's language
+        await FirebaseFirestore.instance
+            .collection('rooms')
+            .doc(_roomId)
+            .update({'language': _selectedLanguage});
+
+        print("Room language updated to: $_selectedLanguage");
+      } catch (e) {
+        print("Error updating room language: $e");
+      }
     }
   }
 
@@ -138,6 +160,7 @@ class _StartGamePageState extends State<StartGamePage> {
         'createdAt': FieldValue.serverTimestamp(),
         'gameCode': gameCode,
         'joinLink': joinLink,
+        'language': _selectedLanguage, // Use the selected language
         'playersRoles': {},
       };
 
@@ -152,6 +175,8 @@ class _StartGamePageState extends State<StartGamePage> {
             .doc(_roomId)
             .snapshots();
       });
+
+      print("Room created with language: $_selectedLanguage");
     } catch (e) {
       print("Error creating room: $e");
     }
@@ -174,10 +199,10 @@ class _StartGamePageState extends State<StartGamePage> {
   }
 
   void _startGame() {
-    FirebaseFirestore.instance
-        .collection('rooms')
-        .doc(_roomId)
-        .update({'status': 'in_progress'});
+    FirebaseFirestore.instance.collection('rooms').doc(_roomId).update({
+      'status': 'in_progress',
+      'language': _selectedLanguage // Ensure language is set when starting
+    });
 
     Navigator.pushReplacement(
       context,
@@ -252,11 +277,33 @@ class _StartGamePageState extends State<StartGamePage> {
                     child: Text(
                       'Game Code: $_gameCode',
                       style: const TextStyle(
-                          fontSize: 40,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white),
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: DropdownButton<String>(
+                    value: _selectedLanguage,
+                    dropdownColor: Colors.grey[800],
+                    iconEnabledColor: Colors.white,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    items: _languages.map((String language) {
+                      return DropdownMenuItem<String>(
+                        value: language,
+                        child: Text(language),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedLanguage = newValue!;
+                      });
+                      // Attempt to update room language when changed
+                      _recreateRoomWithLanguage();
+                    },
+                  ),
+                ),
                 ElevatedButton.icon(
                   onPressed: () {
                     if (_gameCode != null && _joinLink != null) {
